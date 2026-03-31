@@ -10,6 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: get runner ip
+        id: ip
+        run: |
+          echo "ip=$(curl -s ifconfig.me)" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Allow SSH
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.ip }}/32
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -21,4 +44,60 @@ jobs:
             git reset --hard
             git pull origin main
             npm install
-            pm2 restart app || pm2 start app.js
+            pm2 reload aitech || pm2 start app.js --namespace aitechname: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: get runner ip
+        id: ip
+        run: |
+          echo "ip=$(curl -s ifconfig.me)" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Allow SSH
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.ip }}/32
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/sample_nodejs_website
+            git fetch origin
+            git reset --hard origin/main
+            npm install
+            pm2 reload aitech || pm2 start app.js --name aitech
+      
+       - name: Revoke SSH
+       if: always()
+       run: |
+         aws ec2 revoke-security-group-ingress \
+           --group-id ${{ secrets.SG_ID }} \
+           --protocol tcp \
+           --port 22 \
+           --cidr ${{ steps.ip.outputs.ip }}/32
+
