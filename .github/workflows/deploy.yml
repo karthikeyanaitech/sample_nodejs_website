@@ -46,12 +46,12 @@ jobs:
             npm install
             pm2 reload aitech || pm2 start app.js --name aitech
       
-       - name: Revoke SSH
-       if: always()
-       run: |
-         aws ec2 revoke-security-group-ingress \
-           --group-id ${{ secrets.SG_ID }} \
-           --protocol tcp \
-           --port 22 \
-           --cidr ${{ steps.ip.outputs.ip }}/32
+      - name: Revoke SSH
+      if: always()
+      run: |
+        aws ec2 revoke-security-group-ingress \
+          --group-id ${{ secrets.SG_ID }} \
+          --protocol tcp \
+          --port 22 \
+          --cidr ${{ steps.ip.outputs.ip }}/32
 
