@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref_name == "main"
+    if: github.ref_name == 'main'
 
     steps:
       - name: checkout repo
@@ -62,7 +62,7 @@ jobs:
 
   deploy-main:
     runs-on: ubuntu-latest
-    if: github.ref_name == "qa"
+    if: github.ref_name == 'qa'
     steps:
       - name: checkout repo
         uses: actions/checkout@v4
